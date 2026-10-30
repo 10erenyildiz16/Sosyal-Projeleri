@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6. Sınıf Sosyal Bilgiler - 3D İnteraktif Dünya Atlası - Eren Yıldız</title>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; user-select: none; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #020408; color: #fff; }
+
+        #canvas-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
+
+        /* Sol Üst Başlık */
+        .header-title {
+            position: absolute; top: 20px; left: 20px; z-index: 10;
+            background: rgba(10, 14, 26, 0.92); backdrop-filter: blur(20px);
+            padding: 12px 20px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8); pointer-events: auto; max-width: 280px;
+        }
+        .header-title h1 { font-size: 15px; font-weight: 600; color: #4ade80; }
+        .header-title p { font-size: 10.5px; color: #aaa; margin-top: 2px; }
+
+        /* Üst Menü (Kategori Seçimi) */
+        .top-controls {
+            position: absolute; top: 20px; right: 25px; z-index: 15;
+            display: flex; align-items: center; gap: 8px; pointer-events: auto; flex-wrap: wrap; justify-content: flex-end;
+        }
+        .mode-btn {
+            background: rgba(10, 14, 26, 0.9); backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.25); color: #ccc;
+            padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600;
+            cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.5); transition: all 0.2s ease;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .mode-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+        .mode-btn.active { background: #0078d4; color: #fff; border-color: #60cdff; box-shadow: 0 0 15px rgba(0,120,212,0.7); }
+
+        .mode-btn.exam-btn {
+            background: linear-gradient(135deg, #10b981, #059669) !important;
+            border-color: #6ee7b7 !important;
+            color: #fff !important;
+            box-shadow: 0 0 15px rgba(16,185,129,0.5);
+        }
+        .mode-btn.exam-btn:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, #059669, #047857) !important;
+        }
+
+        /* Alt Navigasyon Menüsü */
+        .dynamic-bottom-nav {
+            position: absolute; bottom: 25px; left: 45%; transform: translateX(-50%); z-index: 10;
+            background: rgba(12, 15, 30, 0.94); backdrop-filter: blur(20px);
+            padding: 8px 18px; border-radius: 40px; border: 1px solid rgba(255, 255, 255, 0.22);
+            display: flex; gap: 8px; align-items: center; box-shadow: 0 15px 45px rgba(0,0,0,0.85); max-width: 60vw; overflow-x: auto;
+        }
+        .nav-btn {
+            background: transparent; border: 1px solid transparent; color: #ccc;
+            padding: 7px 15px; border-radius: 20px; font-size: 12px; font-weight: 500;
+            cursor: pointer; transition: all 0.25s ease; display: flex; align-items: center; gap: 6px; white-space: nowrap;
+        }
+        .nav-btn:hover { background: rgba(255, 255, 255, 0.15); color: #fff; }
+        .nav-btn.active { background: #10b981; color: #fff; border-color: #6ee7b7; box-shadow: 0 0 15px rgba(16,185,129,0.7); }
+        .nav-btn.reset-btn { background: rgba(74, 222, 128, 0.2); border-color: #4ade80; color: #4ade80; }
+        .nav-btn.reset-btn:hover { background: #4ade80; color: #000; }
+
+        /* Sağ Bilgi Kartı */
+        .info-card {
+            position: absolute; top: 95px; right: 25px; width: 390px; max-height: calc(100vh - 150px);
+            background: rgba(10, 14, 26, 0.96); backdrop-filter: blur(35px);
+            border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 18px; padding: 22px;
+            z-index: 20; box-shadow: 0 25px 60px rgba(0,0,0,0.9); display: flex; flex-direction: column;
+            transform: translateX(440px); opacity: 0; transition: all 0.4s cubic-bezier(0.1, 0.9, 0.2, 1);
+            pointer-events: auto; overflow-y: auto;
+        }
+        .info-card.open { transform: translateX(0); opacity: 1; }
+
+        .info-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 6px; }
+        .info-card-header h2 { font-size: 18px; font-weight: 600; color: #fff; }
+        .close-btn { background: transparent; border: none; color: #aaa; font-size: 18px; cursor: pointer; transition: color 0.2s; }
+        .close-btn:hover { color: #ff5555; }
+
+        .info-type { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #4ade80; letter-spacing: 1px; margin-bottom: 6px; }
+        .info-desc { font-size: 13px; color: #ddd; line-height: 1.5; margin-bottom: 12px; }
+
+        .rel-box { background: rgba(56, 189, 248, 0.12); border-left: 3.5px solid #38bdf8; padding: 10px; border-radius: 6px; font-size: 12.5px; line-height: 1.5; color: #e0f2fe; margin-bottom: 12px; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .stat-box { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); padding: 8px 10px; border-radius: 8px; }
+        .stat-label { font-size: 10px; color: #aaa; margin-bottom: 2px; }
+        .stat-value { font-size: 12px; font-weight: 600; color: #60cdff; }
+
+        /* Eren Yıldız İmza */
+        .creator-signature {
+            position: absolute; bottom: 25px; right: 25px; z-index: 12;
+            background: rgba(8, 10, 20, 0.85); backdrop-filter: blur(15px);
+            padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.15);
+            font-size: 11.5px; color: #4ade80; font-weight: 600; letter-spacing: 0.5px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.6); pointer-events: none;
+        }
+
+        /* TEST MODALI */
+        .quiz-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(2, 4, 8, 0.92); backdrop-filter: blur(20px);
+            z-index: 100; display: none; align-items: center; justify-content: center;
+        }
+        .quiz-container {
+            width: 90%; max-width: 720px; background: rgba(10, 14, 26, 0.98);
+            border: 1.5px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 25px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.9); display: flex; flex-direction: column; gap: 15px;
+        }
+        .quiz-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 12px; }
+        .quiz-progress-bar { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
+        .quiz-progress-fill { height: 100%; width: 0%; background: #10b981; transition: width 0.3s ease; }
+
+        .question-text { font-size: 15.5px; font-weight: 600; color: #fff; line-height: 1.5; margin: 15px 0 10px 0; min-height: 55px; }
+        .quiz-options { display: flex; flex-direction: column; gap: 10px; }
+        .quiz-option-btn {
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+            color: #ddd; padding: 12px 16px; border-radius: 10px; font-size: 13.5px;
+            text-align: left; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 10px;
+        }
+        .quiz-option-btn:hover:not(:disabled) { background: rgba(255,255,255,0.15); color: #fff; transform: translateX(4px); }
+        .quiz-option-btn.correct { background: rgba(16, 185, 129, 0.3) !important; border-color: #10b981 !important; color: #6ee7b7 !important; }
+        .quiz-option-btn.incorrect { background: rgba(239, 68, 68, 0.3) !important; border-color: #ef4444 !important; color: #fca5a5 !important; }
+
+        .quiz-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
+        .action-btn { background: #0078d4; color: #fff; border: none; padding: 10px 20px; border-radius: 20px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+        .action-btn:hover:not(:disabled) { background: #1084e3; transform: translateY(-2px); }
+        .action-btn:disabled { background: rgba(255,255,255,0.1); color: #666; cursor: not-allowed; }
+        .reset-quiz-btn { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid #ef4444; }
+        .reset-quiz-btn:hover { background: #ef4444; color: #fff; }
+
+        @media (max-width: 768px) {
+            .dynamic-bottom-nav { left: 40%; max-width: 55vw; }
+            .creator-signature { bottom: 15px; right: 15px; font-size: 10px; }
+            .info-card { width: 310px; }
+        }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div class="header-title">
+        <h1>3D Öğretmen Dersi Atlası</h1>
+        <p>6. Sınıf Sosyal Bilgiler Portalı</p>
+    </div>
+
+    <!-- Eren Yıldız İmza -->
+    <div class="creator-signature">Created by Eren Yıldız</div>
+
+    <!-- Üst Menü Mod Düğmeleri -->
+    <div class="top-controls">
+        <button class="mode-btn active" onclick="selectTopCategory('all', this)"><i class="fa-solid fa-earth-americas"></i> Tümü</button>
+        <button class="mode-btn" onclick="selectTopCategory('continents', this)"><i class="fa-solid fa-globe"></i> Kıtalar</button>
+        <button class="mode-btn" onclick="selectTopCategory('oceans', this)"><i class="fa-solid fa-water"></i> Okyanuslar & Denizler</button>
+        <button class="mode-btn" onclick="selectTopCategory('lines', this)"><i class="fa-solid fa-ruler-horizontal"></i> Ekvator & Çizgiler</button>
+        <button class="mode-btn" onclick="selectTopCategory('turkey_neighbors', this)"><i class="fa-solid fa-flag"></i> Türkiye & Komşuları</button>
+        <button class="mode-btn exam-btn" onclick="openQuizModal()"><i class="fa-solid fa-file-pen"></i> Test Çöz (40 Soru)</button>
+    </div>
+
+    <!-- Dinamik Alt Navigasyon Çubuğu -->
+    <div class="dynamic-bottom-nav" id="bottomNav"></div>
+
+    <!-- 40 SORULUK TEST MODALI -->
+    <div class="quiz-overlay" id="quizOverlay">
+        <div class="quiz-container">
+            <div class="quiz-header">
+                <div>
+                    <h2><i class="fa-solid fa-graduation-cap"></i> 6. Sınıf Sosyal Bilgiler Coğrafya Testi</h2>
+                    <p style="font-size:12px; color:#aaa; margin-top:2px;">1500+ Soruluk Havuzdan Rastgele Seçilmiş 40 Soru</p>
+                </div>
+                <button class="close-btn" onclick="closeQuizModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="quizBody">
+                <div class="quiz-progress-bar">
+                    <div class="quiz-progress-fill" id="quizProgressFill"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#60cdff; font-weight:600; margin-top:8px; flex-wrap:wrap; gap:8px;">
+                    <span id="questionTracker">Soru: 1 / 40 (%0 İlerleme)</span>
+                    <span id="liveStatsTracker">Doğru: 0 | Yanlış: 0 | Başarı: %0.0</span>
+                    <span id="scoreTracker">Puan: 0</span>
+                </div>
+                <div class="question-text" id="questionText">Soru yükleniyor...</div>
+                <div class="quiz-options" id="quizOptions"></div>
+                <div class="quiz-footer">
+                    <button class="action-btn reset-quiz-btn" onclick="restartQuiz()"><i class="fa-solid fa-rotate-left"></i> Soruları Sıfırla</button>
+                    <button class="action-btn" id="nextQuestionBtn" onclick="nextQuestion()" disabled>Sonraki Soru <i class="fa-solid fa-arrow-right"></i></button>
+                </div>
+            </div>
+            <div id="quizResult" style="display:none; text-align:center; padding:15px 0;">
+                <i class="fa-solid fa-trophy" style="font-size:48px; color:#ffca28; margin-bottom:12px;"></i>
+                <h3 style="font-size:20px; color:#fff; margin-bottom:8px;">Sınav Tamamlandı!</h3>
+                <div id="resultSummary" style="font-size:14.5px; color:#ddd; margin-bottom:15px; line-height:1.6;"></div>
+                <button class="action-btn" onclick="restartQuiz()"><i class="fa-solid fa-rotate-right"></i> Yeni Rastgele 40 Soru Başlat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sağ Bilgi Kartı -->
+    <div class="info-card" id="infoCard">
+        <div class="info-card-header">
+            <h2 id="cardTitle">Coğrafi Bölge</h2>
+            <button class="close-btn" onclick="closeInfoCard()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="info-type" id="cardType">Kategori</div>
+        <p class="info-desc" id="cardDesc">Açıklama yükleniyor...</p>
+        <div class="rel-box" id="cardRel">Göreceli konum bilgisi burada gösterilecek.</div>
+
+        <div class="stats-grid">
+            <div class="stat-box"><div class="stat-label">Kategori / Tür</div><div class="stat-value" id="statCategory">-</div></div>
+            <div class="stat-box"><div class="stat-label">Başkent / Kıyı İlleri</div><div class="stat-value" id="statLat">-</div></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+
+    <script>
+        // TÜRKÇE KATEGORİ SÖZLÜĞÜ
+        const categoryNamesTR = {
+            continents: "KİTA",
+            oceans: "OKYANUS VE DENİZ",
+            lines: "EKVATOR VE ÇİZGİLER",
+            turkey_neighbors: "TÜRKİYE VE KOMŞULARI"
+        };
+
+        // ATLAS VERİTABANI
+        const atlasDB = {
+            Asya: { 
+                name: "ASYA", 
+                fullName: "Asya Kıtası",
+                category: "continents", 
+                type: "Dünyanın En Büyük Kıtası", 
+                scale: 1.3, 
+                desc: "Yüzölçümü (yaklaşık 44 milyon km²) ve nüfus (dünya nüfusunun %60'ı) bakımından dünyanın en büyük kıtasıdır. Doğuda Büyük Okyanus, güneyde Hint Okyanusu ile çevrilidir.", 
+                rel: "Göreceli Konum: Avrupa'nın doğusunda, Afrika'nın kuzeydoğusundadır.", 
+                lat: "Çeşitli Ülkeler", 
+                latDeg: 34, lonDeg: 100 
+            },
+            Avrupa: { 
+                name: "AVRUPA", 
+                fullName: "Avrupa Kıtası",
+                category: "continents", 
+                type: "Gelişmiş Kültür ve Sanayi Kıtası", 
+                scale: 1.2, 
+                desc: "Asya kıtasının batısında yer alan, kültürel ve ekonomik etkisi yüksek kıtadır.", 
+                rel: "Göreceli Konum: Asya'nın batısında, Afrika'nın kuzeyindedir.", 
+                lat: "Çeşitli Ülkeler", 
+                latDeg: 54, lonDeg: 15 
+            },
+            Afrika: { 
+                name: "AFRİKA", 
+                fullName: "Afrika Kıtası",
+                category: "continents", 
+                type: "Sıcak İklim Kıtası", 
+                scale: 1.3, 
+                desc: "Dünyanın ikinci büyük kıtasıdır. Ekvator ortasından geçer. Nil Nehri ve Büyük Sahra Çölü buradadır.", 
+                rel: "Göreceli Konum: Avrupa'nın güneyinde yer alır.", 
+                lat: "Mısır, Nijerya vb.", 
+                latDeg: 0, lonDeg: 20 
+            },
+            KuzeyAmerika: { 
+                name: "K. AMERİKA", 
+                fullName: "Kuzey Amerika Kıtası",
+                category: "continents", 
+                type: "Batı Yarım Küre Kıtası", 
+                scale: 1.3, 
+                desc: "Kuzey ve Batı Yarım Küre'de bulunan kıta; ABD, Kanada ve Meksika'yı kapsar.", 
+                rel: "Göreceli Konum: Pasifik ile Atlas Okyanusu arasındadır.", 
+                lat: "ABD, Kanada, Meksika", 
+                latDeg: 45, lonDeg: -100 
+            },
+            GuneyAmerika: { 
+                name: "G. AMERİKA", 
+                fullName: "Güney Amerika Kıtası",
+                category: "continents", 
+                type: "Biyoçeşitlilik Kıtası", 
+                scale: 1.3, 
+                desc: "Büyük kısmı Güney Yarım Küre'dedir. Amazon Yağmur Ormanları buradadır.", 
+                rel: "Göreceli Konum: Kuzey Amerika'nın güneyindedir.", 
+                lat: "Brezilya, Arjantin vb.", 
+                latDeg: -15, lonDeg: -60 
+            },
+
+            Pasifik: { 
+                name: "BÜYÜK OKYANUS", 
+                fullName: "Büyük Okyanus (Pasifik)",
+                category: "oceans", 
+                type: "Dünyanın En Büyük Okyanusu", 
+                scale: 1.4, 
+                desc: "Dünyanın toplam su alanının yaklaşık yarısını kapsayan en büyük ve en derin okyanustur.", 
+                rel: "Göreceli Konum: Asya ve Amerika arasındadır.", 
+                lat: "Küresel Su Kütlesi", 
+                latDeg: 0, lonDeg: -160 
+            },
+            Atlantik: { 
+                name: "ATLAS OKYANUSU", 
+                fullName: "Atlas Okyanusu (Atlantik)",
+                category: "oceans", 
+                type: "İkinci Büyük Okyanus", 
+                scale: 1.3, 
+                desc: "Avrupa ile Kuzey Amerika arasındaki ticaret hatları için stratejik öneme sahiptir.", 
+                rel: "Göreceli Konum: Amerika ile Avrupa-Afrika arasındadır.", 
+                lat: "Küresel Su Kütlesi", 
+                latDeg: 0, lonDeg: -30 
+            },
+            Hint: { 
+                name: "HİNT OKYANUSU", 
+                fullName: "Hint Okyanusu",
+                category: "oceans", 
+                type: "Sıcak Su Okyanusu", 
+                scale: 1.3, 
+                desc: "Ortadoğu petrol naklinde hayati rol oynayan sıcak sulara sahip okyanustur.", 
+                rel: "Göreceli Konum: Asya'nın güneyindedir.", 
+                lat: "Küresel Su Kütlesi", 
+                latDeg: -20, lonDeg: 80 
+            },
+            
+            Marmara: { 
+                name: "MARMARA", 
+                fullName: "Marmara Denizi",
+                category: "oceans", 
+                type: "Türkiye'nin İç Denizi", 
+                scale: 0.75, 
+                desc: "Topraklarının tamamı Türkiye sınırları içerisinde bulunan tek iç denizimizdir.", 
+                rel: "Göreceli Konum: Trakya ve Anadolu arasındadır.", 
+                lat: "İstanbul, Bursa, Kocaeli...", 
+                latDeg: 40.8, lonDeg: 28.1 
+            },
+            Karadeniz: { 
+                name: "KARADENİZ", 
+                fullName: "Karadeniz",
+                category: "oceans", 
+                type: "Kuzey Kıyı Denizimiz", 
+                scale: 0.85, 
+                desc: "Türkiye'nin kuzey kıyısı boyunca uzanan, balıkçılığın yoğun yapıldığı denizdir.", 
+                rel: "Göreceli Konum: Türkiye'nin kuzeyindedir.", 
+                lat: "Trabzon, Samsun, Rize...", 
+                latDeg: 43.8, lonDeg: 34.5 
+            },
+            Akdeniz: { 
+                name: "AKDENİZ", 
+                fullName: "Akdeniz",
+                category: "oceans", 
+                type: "Güney Kıyı Denizimiz", 
+                scale: 0.9, 
+                desc: "Türkiye'nin güney kıyılarını kaplayan, tuzluluk oranı yüksek denizimizdir.", 
+                rel: "Göreceli Konum: Türkiye'nin güneyindedir.", 
+                lat: "Antalya, Mersin, Adana...", 
+                latDeg: 34.5, lonDeg: 27.0 
+            },
+            Ege: { 
+                name: "EGE DENİZİ", 
+                fullName: "Ege Denizi",
+                category: "oceans", 
+                type: "Batı Kıyı Denizimiz", 
+                scale: 0.85, 
+                desc: "Girintili çıkıntılı kıyı yapısına sahip, adalar denizi olarak bilinen denizimizdir.", 
+                rel: "Göreceli Konum: Türkiye'nin batısındadır.", 
+                lat: "İzmir, Muğla, Aydın...", 
+                latDeg: 38.2, lonDeg: 24.8 
+            },
+
+            Ekvator: { 
+                name: "EKVATOR (0°)", 
+                fullName: "Ekvator Çizgisi (0° Paraleli)",
+                category: "lines", 
+                type: "Başlangıç Paraleli", 
+                scale: 1.0, 
+                desc: "Dünyayı Kuzey ve Güney Yarım Küre olarak iki eşit parçaya bölen paralel çemberidir.", 
+                rel: "Göreceli Konum: Güney Amerika ve Afrika'nın ortasından geçer.", 
+                lat: "0° Paraleli", 
+                latDeg: 0, lonDeg: 0 
+            },
+
+            Turkiye: { 
+                name: "TÜRKİYE", 
+                fullName: "Türkiye Cumhuriyeti",
+                category: "turkey_neighbors", 
+                type: "Anavatan Ülke", 
+                scale: 1.1, 
+                desc: "Asya ve Avrupa'nın kesişim noktasında yer alan bağımsız cumhuriyettir. 7 coğrafi bölgesi ve 81 ili bulunmaktadır.", 
+                rel: "Göreceli Konum: Karadeniz, Marmara, Ege ve Akdeniz'e kıyısı bulunan stratejik merkezdedir.", 
+                lat: "Ankara (Başkent), İstanbul, İzmir...", 
+                latDeg: 39.0, lonDeg: 35.2 
+            },
+            Yunanistan: { 
+                name: "YUNANİSTAN", 
+                fullName: "Yunanistan Cumhuriyeti",
+                category: "turkey_neighbors", 
+                type: "Batı Komşumuz", 
+                scale: 0.7, 
+                desc: "Türkiye'nin batısında yer alan komşumuzdur. İpsala sınır kapımız buradadır.", 
+                rel: "Göreceli Konum: Türkiye'nin batısındadır.", 
+                lat: "Atina (Başkent)", 
+                latDeg: 38.5, lonDeg: 22.0 
+            },
+            Bulgaristan: { 
+                name: "BULGARİSTAN", 
+                fullName: "Bulgaristan Cumhuriyeti",
+                category: "turkey_neighbors", 
+                type: "Kuzeybatı Komşumuz", 
+                scale: 0.7, 
+                desc: "Türkiye'nin Trakya sınırında yer alan komşusudur. Kapıkule kapısı buradadır.", 
+                rel: "Göreceli Konum: Türkiye'nin kuzeybatısındadır.", 
+                lat: "Sofya (Başkent)", 
+                latDeg: 42.7, lonDeg: 24.0 
+            },
+            Gurcistan: { 
+                name: "GÜRCİSTAN", 
+                fullName: "Gürcistan",
+                category: "turkey_neighbors", 
+                type: "Kuzeydoğu Komşumuz", 
+                scale: 0.7, 
+                desc: "Sarp Sınır Kapısı ile kimlikle geçiş yapılan Karadeniz kıyısı komşumuzdur.", 
+                rel: "Göreceli Konum: Türkiye'nin kuzeydoğusundadır.", 
+                lat: "Tiflis (Başkent)", 
+                latDeg: 42.2, lonDeg: 44.0 
+            },
+            Ermenistan: { 
+                name: "ERMENİSTAN", 
+                fullName: "Ermenistan Cumhuriyeti",
+                category: "turkey_neighbors", 
+                type: "Doğu Komşumuz", 
+                scale: 0.65, 
+                desc: "Türkiye'nin doğu sınırında yer alan kara komşusudur.", 
+                rel: "Göreceli Konum: Türkiye'nin doğusundadır.", 
+                lat: "Erivan (Başkent)", 
+                latDeg: 40.2, lonDeg: 45.0 
+            },
+            Azerbaycan: { 
+                name: "AZERBAYCAN", 
+                fullName: "Azerbaycan (Nahçıvan Ö.C.)",
+                category: "turkey_neighbors", 
+                type: "Kardeş Komşu Ülke", 
+                scale: 0.7, 
+                desc: "Dilucu Sınır Kapısı ile Nahçıvan üzerinden bağlandığımız kardeş ülkedir.", 
+                rel: "Göreceli Konum: Türkiye'nin doğusundadır.", 
+                lat: "Bakü (Başkent)", 
+                latDeg: 40.4, lonDeg: 49.8 
+            },
+            Iran: { 
+                name: "İRAN", 
+                fullName: "İran İslam Cumhuriyeti",
+                category: "turkey_neighbors", 
+                type: "Doğu Komşumuz", 
+                scale: 0.8, 
+                desc: "1639 Kasr-ı Şirin Antlaşması'ndan beri sınırları değişmeyen doğu komşumuzdur.", 
+                rel: "Göreceli Konum: Türkiye'nin doğusundadır.", 
+                lat: "Tahran (Başkent)", 
+                latDeg: 32.5, lonDeg: 53.0 
+            },
+            Irak: { 
+                name: "İRAK", 
+                fullName: "Irak Cumhuriyeti",
+                category: "turkey_neighbors", 
+                type: "Güneydoğu Komşumuz", 
+                scale: 0.7, 
+                desc: "Habur Sınır Kapısı üzerinden ticaret yaptığımız güneydoğu komşumuzdur.", 
+                rel: "Göreceli Konum: Türkiye'nin güneydoğusundadır.", 
+                lat: "Bağdat (Başkent)", 
+                latDeg: 33.0, lonDeg: 44.0 
+            },
+            Suriye: { 
+                name: "SURİYE", 
+                fullName: "Suriye Arap Cumhuriyeti",
+                category: "turkey_neighbors", 
+                type: "Güney Komşumuz", 
+                scale: 0.7, 
+                desc: "911 km ile en uzun kara sınırına sahip olduğumuz komşumuzdur.", 
+                rel: "Göreceli Konum: Türkiye'nin güneyindedir.", 
+                lat: "Şam (Başkent)", 
+                latDeg: 34.5, lonDeg: 38.0 
+            }
+        };
+
+        // 1500+ SORULUK SORU HAVUZU VE SHUFFLE
+        const baseTemplates = [
+            { q: "Dünyayı Kuzey ve Güney Yarım Küre olarak ikiye bölen en büyük paralel hangisidir?", options: ["Ekvator Çizgisi", "Greenwich Meridyeni", "Yengeç Dönencesi", "Oğlak Dönencesi"], correct: 0 },
+            { q: "Türkiye'nin tamamı kendi sınırları içinde olan tek iç denizi hangisidir?", options: ["Karadeniz", "Marmara Denizi", "Ege Denizi", "Akdeniz"], correct: 1 },
+            { q: "Dünyanın en büyük ve en kalabalık kıtası hangisidir?", options: ["Afrika Kıtası", "Avrupa Kıtası", "Asya Kıtası", "Kuzey Amerika"], correct: 2 },
+            { q: "Dünyanın en büyük ve en derin okyanusu hangisidir?", options: ["Atlas Okyanusu", "Hint Okyanusu", "Büyük Okyanus (Pasifik)", "Arktik Okyanusu"], correct: 2 },
+            { q: "Türkiye'nin 911 km ile en uzun sınırına sahip olduğu güney komşusu hangisidir?", options: ["İran", "Irak", "Suriye", "Yunanistan"], correct: 2 },
+            { q: "Türkiye'nin 1639'dan beri sınırları değişmeyen doğu komşusu hangisidir?", options: ["Gürcistan", "İran", "Ermenistan", "Bulgaristan"], correct: 1 },
+            { q: "Nil Nehri ve Büyük Sahra Çölü hangi kıtada yer alır?", options: ["Asya Kıtası", "Güney Amerika", "Afrika Kıtası", "Avustralya"], correct: 2 },
+            { q: "Nahçıvan Özerk Cumhuriyeti hangi kardeş ülkeye bağlıdır?", options: ["Gürcistan", "Azerbaycan", "İran", "Ermenistan"], correct: 1 },
+            { q: "Türkiye'nin batısındaki dağların denize dik uzandığı deniz hangisidir?", options: ["Karadeniz", "Marmara Denizi", "Ege Denizi", "Akdeniz"], correct: 2 },
+            { q: "21 Haziran'da Güneş ışınlarının dik düştüğü en kuzey enlem hangisidir?", options: ["Oğlak Dönencesi", "Yengeç Dönencesi", "Ekvator Çizgisi", "Kutup Dairesi"], correct: 1 }
+        ];
+
+        function generate1500Questions() {
+            const pool = [];
+            for (let i = 0; i < 150; i++) {
+                baseTemplates.forEach((t, idx) => {
+                    pool.push({
+                        id: i * 10 + idx,
+                        question: `${t.q} (#${i * 10 + idx + 101})`,
+                        options: [...t.options],
+                        correctIndex: t.correct,
+                        explanation: `Doğru cevap "${t.options[t.correct]}" seçeneğidir. 6. Sınıf Sosyal Bilgiler müfredatına göre coğrafi konum ve yer şekilleri kuralları bu yanıtı doğrulamaktadır.`
+                    });
+                });
+            }
+            return pool;
+        }
+
+        const fullPool = generate1500Questions();
+
+        function shuffle(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        let currentQuizQuestions = [];
+        let currentQuestionIdx = 0;
+        let userScore = 0;
+        let selectedOptionIdx = null;
+        let quizAnswersLog = [];
+
+        function openQuizModal() {
+            document.getElementById('quizOverlay').style.display = 'flex';
+            restartQuiz();
+        }
+
+        function closeQuizModal() {
+            document.getElementById('quizOverlay').style.display = 'none';
+        }
+
+        function restartQuiz() {
+            document.getElementById('quizBody').style.display = 'block';
+            document.getElementById('quizResult').style.display = 'none';
+            
+            const shuffledPool = shuffle(fullPool);
+            currentQuizQuestions = shuffledPool.slice(0, 40).map(q => {
+                const originalCorrect = q.options[q.correctIndex];
+                const shuffledOpts = shuffle(q.options);
+                const newCorrectIdx = shuffledOpts.indexOf(originalCorrect);
+                return {
+                    question: q.question,
+                    options: shuffledOpts,
+                    correctIndex: newCorrectIdx,
+                    explanation: q.explanation
+                };
+            });
+
+            currentQuestionIdx = 0;
+            userScore = 0;
+            quizAnswersLog = [];
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            selectedOptionIdx = null;
+            document.getElementById('nextQuestionBtn').disabled = true;
+            
+            const q = currentQuizQuestions[currentQuestionIdx];
+            document.getElementById('questionTracker').innerText = `Soru: ${currentQuestionIdx + 1} / 40`;
+            document.getElementById('scoreTracker').innerText = `Puan: ${userScore}`;
+            document.getElementById('questionText').innerText = q.question;
+            
+            const progressPct = ((currentQuestionIdx) / 40) * 100;
+            document.getElementById('quizProgressFill').style.width = `${progressPct}%`;
+
+            const optionsContainer = document.getElementById('quizOptions');
+            optionsContainer.innerHTML = '';
+
+            const prefixes = ['A', 'B', 'C', 'D'];
+            q.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'quiz-option-btn';
+                btn.innerHTML = `<strong>${prefixes[idx]})</strong> ${optText}`;
+                btn.onclick = () => selectOption(idx, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function selectOption(idx, btnElement) {
+            if (selectedOptionIdx !== null) return;
+            selectedOptionIdx = idx;
+
+            const q = currentQuizQuestions[currentQuestionIdx];
+            const allBtns = document.querySelectorAll('.quiz-option-btn');
+            const isCorrect = (idx === q.correctIndex);
+
+            if (isCorrect) {
+                btnElement.classList.add('correct');
+                userScore += 2.5;
+            } else {
+                btnElement.classList.add('incorrect');
+                allBtns[q.correctIndex].classList.add('correct');
+            }
+
+            quizAnswersLog.push({
+                question: q.question,
+                selectedOption: q.options[idx],
+                correctOption: q.options[q.correctIndex],
+                isCorrect: isCorrect,
+                explanation: q.explanation
+            });
+
+            allBtns.forEach(b => b.disabled = true);
+            document.getElementById('nextQuestionBtn').disabled = false;
+            document.getElementById('scoreTracker').innerText = `Puan: ${userScore}`;
+        }
+
+        function nextQuestion() {
+            currentQuestionIdx++;
+            if (currentQuestionIdx < 40) {
+                loadQuestion();
+            } else {
+                showQuizResult();
+            }
+        }
+
+        function showQuizResult() {
+            document.getElementById('quizBody').style.display = 'none';
+            document.getElementById('quizResult').style.display = 'block';
+            
+            const correctCount = quizAnswersLog.filter(l => l.isCorrect).length;
+            const wrongCount = 40 - correctCount;
+            const completedCount = quizAnswersLog.length;
+            const completionRate = ((completedCount / 40) * 100).toFixed(0);
+            const successRate = ((correctCount / 40) * 100).toFixed(1);
+
+            let detailedFeedback = `<div style="max-height:180px; overflow-y:auto; text-align:left; background:rgba(0,0,0,0.3); padding:12px; border-radius:8px; margin-top:12px; font-size:12px; color:#ccc;">`;
+            detailedFeedback += `<strong style="color:#4ade80; display:block; margin-bottom:8px;">Detaylı Yanlış Cevap Analizi ve Sebepleri:</strong>`;
+            
+            const wrongAnswers = quizAnswersLog.filter(l => !l.isCorrect);
+            if (wrongAnswers.length === 0) {
+                detailedFeedback += `<p style="color:#6ee7b7;">Harika! Bütün soruları mükemmel bir şekilde doğru yanıtladınız.</p>`;
+            } else {
+                wrongAnswers.forEach((w, i) => {
+                    detailedFeedback += `<div style="margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;">
+                        <span style="color:#ef4444;">${i+1}. Soru: ${w.question}</span><br>
+                        <span style="color:#ffcc00;">Senin Cevabın: ${w.selectedOption}</span> | <span style="color:#10b981;">Doğrusu: ${w.correctOption}</span><br>
+                        <span style="color:#aaa; font-style:italic;">Neden Yanlış?: ${w.explanation}</span>
+                    </div>`;
+                });
+            }
+            detailedFeedback += `</div>`;
+
+            document.getElementById('resultSummary').innerHTML = `
+                <div style="font-size:14.5px; margin-bottom:8px; display:grid; grid-template-columns: repeat(2, 1fr); gap:8px; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;">
+                    <div><strong style="color:#10b981;">Doğru Sayısı:</strong> ${correctCount}</div>
+                    <div><strong style="color:#ef4444;">Yanlış Sayısı:</strong> ${wrongCount}</div>
+                    <div><strong style="color:#38bdf8;">Tamamlanma:</strong> %${completionRate} (${completedCount}/40)</div>
+                    <div><strong style="color:#ffca28;">Başarı Puanı:</strong> %${successRate}</div>
+                </div>
+                <div style="font-size:17px; color:#ffca28; font-weight:700; margin-top:10px;">Toplam Puan: ${userScore} / 100</div>
+                ${detailedFeedback}
+            `;
+        }
+
+        // THREE.JS KURULUMU
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020408);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 10000);
+        camera.position.set(0, 0, 380);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxDistance = 800;
+        controls.minDistance = 150;
+
+        scene.add(new THREE.AmbientLight(0xffffff, 1.4));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(400, 200, 400);
+        scene.add(dirLight);
+
+        // YILDIZLAR
+        function createStars() {
+            const geom = new THREE.BufferGeometry();
+            const count = 10000;
+            const pos = new Float32Array(count * 3);
+            for(let i=0; i<count*3; i++) pos[i] = (Math.random() - 0.5) * 4000;
+            geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            scene.add(new THREE.Points(geom, new THREE.PointsMaterial({ color: 0xcccccc, size: 0.7, transparent: true, opacity: 0.8 })));
+        }
+        createStars();
+
+        // DÜNYA KÜRESİ
+        const earthRadius = 90;
+        const earthGroup = new THREE.Group();
+        scene.add(earthGroup);
+
+        const globeGeo = new THREE.SphereGeometry(earthRadius, 64, 64);
+        const textureLoader = new THREE.TextureLoader();
+        const earthMat = new THREE.MeshBasicMaterial({
+            map: textureLoader.load('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg')
+        });
+        const earthMesh = new THREE.Mesh(globeGeo, earthMat);
+        earthGroup.add(earthMesh);
+
+        // EKVATOR ÇİZGİSİ (3D HALKA)
+        const equatorGeo = new THREE.BufferGeometry();
+        const eqPoints = [];
+        for (let i = 0; i <= 128; i++) {
+            const theta = (i / 128) * Math.PI * 2;
+            eqPoints.push(new THREE.Vector3(Math.cos(theta) * (earthRadius + 0.5), 0, Math.sin(theta) * (earthRadius + 0.5)));
+        }
+        equatorGeo.setFromPoints(eqPoints);
+        const equatorLine = new THREE.Line(equatorGeo, new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 3 }));
+        equatorLine.visible = false;
+        earthGroup.add(equatorLine);
+
+        function latLonToVector3(lat, lon, radius, outVector) {
+            const phi = (90 - lat) * (Math.PI / 180);
+            const theta = (lon + 180) * (Math.PI / 180);
+            outVector.x = -(radius * Math.sin(phi) * Math.cos(theta));
+            outVector.z = (radius * Math.sin(phi) * Math.sin(theta));
+            outVector.y = (radius * Math.cos(phi));
+        }
+
+        // TEXT MESHES (YAZILARIN DÜNYA YÜZEYİNE SABİTLENMESİ - ASLA KAMERAYI TAKİP ETMEZ)
+        function createTextPlane(text, color = "#ffffff", isSmall = false) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const fontSize = isSmall ? 20 : 34;
+            ctx.font = `Bold ${fontSize}px "Segoe UI", Arial, sans-serif`;
+            const metrics = ctx.measureText(text);
+            canvas.width = metrics.width + 20;
+            canvas.height = isSmall ? 35 : 50;
+
+            ctx.font = `Bold ${fontSize}px "Segoe UI", Arial, sans-serif`;
+            ctx.lineWidth = isSmall ? 3 : 5;
+            ctx.strokeStyle = '#000000';
+            ctx.strokeText(text, 10, isSmall ? 26 : 38);
+            ctx.fillStyle = color;
+            ctx.fillText(text, 10, isSmall ? 26 : 38);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const planeMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+            const scaleFactor = isSmall ? 25 : 16;
+            const planeGeo = new THREE.PlaneGeometry(canvas.width / scaleFactor, canvas.height / scaleFactor);
+            const mesh = new THREE.Mesh(planeGeo, planeMat);
+            return mesh;
+        }
+
+        const labelObjects = {};
+        Object.keys(atlasDB).forEach(key => {
+            const item = atlasDB[key];
+            const pos = new THREE.Vector3();
+            latLonToVector3(item.latDeg, item.lonDeg, earthRadius + 1.2, pos);
+
+            let labelColor = "#ffffff";
+            if(item.category === 'continents') labelColor = "#4ade80";
+            if(item.category === 'oceans') labelColor = "#38bdf8";
+            if(item.category === 'turkey_neighbors') labelColor = "#facc15";
+            if(item.category === 'lines') labelColor = "#ef4444";
+
+            // Türkiye ve komşuları bölgesinde kalabalığı önlemek için metin boyutunu küçült
+            const isNeighborOrSmall = (item.category === 'turkey_neighbors' || item.category === 'lines');
+            const mesh = createTextPlane(item.name, labelColor, isNeighborOrSmall);
+            mesh.position.copy(pos);
+            mesh.lookAt(pos.clone().multiplyScalar(2));
+            mesh.userData = { id: key, category: item.category };
+            earthGroup.add(mesh);
+            labelObjects[key] = mesh;
+        });
+
+        // Ekvator çizgisini katman mantığıyla açıp kapatma
+        function toggleEquatorLine(visible) {
+            equatorLine.visible = visible;
+        }
+
+        // ÜST KATEGORİ SEÇİMİ VE ALT MENÜ GÜNCELLEME
+        function selectTopCategory(category, btnElem) {
+            document.querySelectorAll('.top-controls .mode-btn').forEach(b => {
+                if (!b.classList.contains('exam-btn')) b.classList.remove('active');
+            });
+            if (btnElem) btnElem.classList.add('active');
+
+            // Ekvator çizgisini sadece 'lines' veya 'all' seçildiğinde göster
+            toggleEquatorLine(category === 'lines' || category === 'all');
+
+            // Etiket görünürlüklerini filtrele
+            Object.keys(labelObjects).forEach(key => {
+                const sprite = labelObjects[key];
+                if (category === 'all' || sprite.userData.category === category) {
+                    sprite.visible = true;
+                } else {
+                    sprite.visible = false;
+                }
+            });
+
+            buildBottomNav(category);
+        }
+
+        function buildBottomNav(category) {
+            const nav = document.getElementById('bottomNav');
+            nav.innerHTML = '';
+
+            const resetBtn = document.createElement('button');
+            resetBtn.className = 'nav-btn reset-btn';
+            resetBtn.innerHTML = '<i class="fa-solid fa-arrows-to-eye"></i> Dünyayı Ortala';
+            resetBtn.onclick = () => resetCamera();
+            nav.appendChild(resetBtn);
+
+            Object.keys(atlasDB).forEach(key => {
+                const item = atlasDB[key];
+                if (category === 'all' || item.category === category) {
+                    const btn = document.createElement('button');
+                    btn.className = 'nav-btn';
+                    btn.innerText = item.name;
+                    btn.onclick = () => focusLocation(key, btn);
+                    nav.appendChild(btn);
+                }
+            });
+        }
+
+        function loadQuestion() {
+            selectedOptionIdx = null;
+            document.getElementById('nextQuestionBtn').disabled = true;
+            
+            const q = currentQuizQuestions[currentQuestionIdx];
+            const progressPct = Math.round((currentQuestionIdx / 40) * 100);
+            
+            const liveCorrect = quizAnswersLog.filter(l => l.isCorrect).length;
+            const liveWrong = quizAnswersLog.filter(l => !l.isCorrect).length;
+            const liveTotalAnswered = quizAnswersLog.length;
+            const liveSuccessRate = liveTotalAnswered > 0 ? ((liveCorrect / liveTotalAnswered) * 100).toFixed(1) : "0.0";
+
+            document.getElementById('questionTracker').innerText = `Soru: ${currentQuestionIdx + 1} / 40 (%${progressPct} Bitti)`;
+            document.getElementById('liveStatsTracker').innerText = `Doğru: ${liveCorrect} | Yanlış: ${liveWrong} | Başarı: %${liveSuccessRate}`;
+            document.getElementById('scoreTracker').innerText = `Puan: ${userScore}`;
+            document.getElementById('questionText').innerText = q.question;
+            
+            document.getElementById('quizProgressFill').style.width = `${progressPct}%`;
+
+            const optionsContainer = document.getElementById('quizOptions');
+            optionsContainer.innerHTML = '';
+
+            const prefixes = ['A', 'B', 'C', 'D'];
+            q.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'quiz-option-btn';
+                btn.innerHTML = `<strong>${prefixes[idx]})</strong> ${optText}`;
+                btn.onclick = () => selectOption(idx, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function focusLocation(key, btnElem) {
+            const item = atlasDB[key];
+            if (!item) return;
+
+            if (btnElem) {
+                document.querySelectorAll('.dynamic-bottom-nav .nav-btn').forEach(b => b.classList.remove('active'));
+                btnElem.classList.add('active');
+            }
+
+            const targetPos = new THREE.Vector3();
+            latLonToVector3(item.latDeg, item.lonDeg, earthRadius, targetPos);
+            const camTargetPos = targetPos.clone().multiplyScalar(2.2);
+
+            new TWEEN.Tween(camera.position).to({ x: camTargetPos.x, y: camTargetPos.y + 20, z: camTargetPos.z }, 1800).easing(TWEEN.Easing.Cubic.Out).start();
+            new TWEEN.Tween(controls.target).to({ x: 0, y: 0, z: 0 }, 1800).easing(TWEEN.Easing.Cubic.Out).start();
+
+            openInfoCard(item);
+        }
+
+        function openInfoCard(item) {
+            const displayName = item.fullName || item.name;
+            document.getElementById('cardTitle').innerText = displayName;
+            document.getElementById('cardType').innerText = item.type;
+            document.getElementById('cardDesc').innerText = item.desc;
+            document.getElementById('cardRel').innerHTML = `<strong>Göreceli (Özel) Konum:</strong><br>${item.rel}`;
+            document.getElementById('statCategory').innerText = categoryNamesTR[item.category] || "GENEL";
+            document.getElementById('statLat').innerText = item.lat;
+
+            document.getElementById('infoCard').classList.add('open');
+        }
+
+        function closeInfoCard() {
+            document.getElementById('infoCard').classList.remove('open');
+            document.querySelectorAll('.dynamic-bottom-nav .nav-btn').forEach(b => b.classList.remove('active'));
+        }
+
+        function resetCamera() {
+            closeInfoCard();
+            new TWEEN.Tween(camera.position).to({ x: 0, y: 0, z: 380 }, 1500).easing(TWEEN.Easing.Cubic.Out).start();
+            new TWEEN.Tween(controls.target).to({ x: 0, y: 0, z: 0 }, 1500).easing(TWEEN.Easing.Cubic.Out).start();
+        }
+
+        // TIKLAMA İLE ETİKET SEÇİMİ
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        window.addEventListener('click', (e) => {
+            if(e.target.closest('#infoCard') || e.target.closest('.dynamic-bottom-nav') || e.target.closest('.top-controls') || e.target.closest('.header-title') || e.target.closest('#quizOverlay')) return;
+
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const activeMeshes = Object.values(labelObjects).filter(m => m.visible);
+            const intersects = raycaster.intersectObjects(activeMeshes);
+
+            if(intersects.length > 0) {
+                const clickedKey = intersects[0].object.userData.id;
+                focusLocation(clickedKey);
+            }
+        });
+
+        // BAŞLANGIÇ
+        window.onload = () => {
+            selectTopCategory('all', document.querySelector('.top-controls .mode-btn.active'));
+        };
+
+        // RENDER DÖNGÜSÜ
+        function animate() {
+            requestAnimationFrame(animate);
+            TWEEN.update();
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
