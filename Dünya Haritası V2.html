@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Dünya Atlası - 6. Sınıf Sosyal Bilgiler Portalı</title>
+    <!-- Font Awesome İkonları -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #030712;
+            color: #f3f4f6;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Sol Üst Başlık */
+        .header-title {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 20;
+            background: rgba(10, 15, 30, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 12px 20px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            pointer-events: none;
+        }
+        .header-title h1 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #4ade80;
+            letter-spacing: -0.3px;
+        }
+        .header-title p {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-top: 2px;
+        }
+
+        /* Sol Çizim Araç Çubuğu */
+        .drawing-toolbar {
+            position: absolute;
+            top: 100px;
+            left: 20px;
+            z-index: 25;
+            background: rgba(10, 15, 30, 0.92);
+            backdrop-filter: blur(20px);
+            padding: 10px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: auto;
+        }
+        .tool-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #d1d5db;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 16px;
+        }
+        .tool-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+        .tool-btn.active {
+            background: #10b981;
+            color: #fff;
+            border-color: #6ee7b7;
+            box-shadow: 0 0 14px rgba(16, 185, 129, 0.6);
+        }
+
+        .drawing-settings {
+            position: absolute;
+            top: 0;
+            left: 60px;
+            background: rgba(10, 15, 30, 0.96);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 14px;
+            border-radius: 14px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            width: 180px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            z-index: 30;
+        }
+        .color-picker-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .color-dot {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s ease;
+        }
+        .color-dot:hover {
+            transform: scale(1.1);
+        }
+        .color-dot.active {
+            border-color: #ffffff;
+            transform: scale(1.15);
+        }
+
+        /* Sol Alt 2D/3D Harita Geçiş Butonu */
+        .map-mode-toggle {
+            position: absolute;
+            bottom: 85px;
+            left: 20px;
+            z-index: 25;
+            background: rgba(10, 15, 30, 0.9);
+            backdrop-filter: blur(15px);
+            border: 1.5px solid rgba(56, 189, 248, 0.4);
+            color: #38bdf8;
+            padding: 10px 18px;
+            border-radius: 14px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .map-mode-toggle:hover {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: #38bdf8;
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+        /* 2D TAM EKRAN DÜZLEM HARİTA MODALI */
+        .flat-map-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 10;
+            background: #070d1e;
+            display: none;
+            overflow: hidden;
+        }
+        .flat-map-svg {
+            width: 100%;
+            height: 100%;
+            background: #070d1e;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 11;
+        }
+        #2dCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 12;
+            pointer-events: none;
+        }
+        #2dCanvas.drawing-active {
+            pointer-events: auto;
+            cursor: crosshair;
+        }
+
+        /* Eren Yıldız İmza */
+        .creator-signature {
+            position: absolute;
+            bottom: 25px;
+            right: 25px;
+            z-index: 15;
+            background: rgba(10, 15, 30, 0.85);
+            backdrop-filter: blur(15px);
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            font-size: 11px;
+            color: #4ade80;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.6);
+            pointer-events: none;
+        }
+
+        /* Üst Menü */
+        .top-controls {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            pointer-events: auto;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .mode-btn {
+            background: rgba(10, 15, 30, 0.88);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #d1d5db;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .mode-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+        .mode-btn.active {
+            background: #0284c7;
+            color: #fff;
+            border-color: #38bdf8;
+            box-shadow: 0 0 15px rgba(2, 132, 199, 0.7);
+        }
+        .mode-btn.exam-btn {
+            background: linear-gradient(135deg, #10b981, #059669) !important;
+            border-color: #6ee7b7 !important;
+            color: #fff !important;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+        }
+        .mode-btn.exam-btn:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, #059669, #047857) !important;
+        }
+
+        /* Görünmez Alt Navigasyon Çubuğu */
+        .dynamic-bottom-nav {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 15;
+            padding: 8px 18px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            max-width: 65vw;
+            overflow-x: auto;
+            opacity: 0;
+            pointer-events: auto;
+        }
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: transparent;
+            padding: 6px 14px;
+            font-size: 12px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        /* Sağ Bilgi Kartı */
+        .info-card {
+            position: absolute;
+            top: 90px;
+            right: 25px;
+            width: 380px;
+            max-height: calc(100vh - 140px);
+            background: rgba(10, 15, 30, 0.96);
+            backdrop-filter: blur(35px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 22px;
+            z-index: 25;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            transform: translateX(430px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.1, 0.9, 0.2, 1);
+            pointer-events: auto;
+            overflow-y: auto;
+        }
+        .info-card.open {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .info-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            padding-bottom: 8px;
+        }
+        .info-card-header h2 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .close-btn {
+            background: transparent;
+            border: none;
+            color: #9ca3af;
+            font-size: 18px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .close-btn:hover {
+            color: #ef4444;
+        }
+
+        .info-type {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #4ade80;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .info-desc {
+            font-size: 13px;
+            color: #d1d5db;
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+
+        .rel-box {
+            background: rgba(56, 189, 248, 0.12);
+            border-left: 3.5px solid #38bdf8;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 12.5px;
+            line-height: 1.5;
+            color: #e0f2fe;
+            margin-bottom: 12px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        .stat-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 10px;
+            border-radius: 8px;
+        }
+        .stat-label {
+            font-size: 10px;
+            color: #9ca3af;
+            margin-bottom: 2px;
+        }
+        .stat-value {
+            font-size: 12px;
+            font-weight: 600;
+            color: #38bdf8;
+        }
+
+        /* TEST MODALI */
+        .quiz-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(2, 6, 23, 0.92);
+            backdrop-filter: blur(20px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .quiz-container {
+            width: 90%;
+            max-width: 720px;
+            background: rgba(10, 15, 30, 0.98);
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            padding-bottom: 12px;
+        }
+        .quiz-progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .quiz-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: #10b981;
+            transition: width 0.3s ease;
+        }
+
+        .question-text {
+            font-size: 15.5px;
+            font-weight: 600;
+            color: #fff;
+            line-height: 1.5;
+            margin: 15px 0 10px 0;
+            min-height: 55px;
+        }
+        .quiz-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .quiz-option-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #ddd;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 13.5px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .quiz-option-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            transform: translateX(4px);
+        }
+        .quiz-option-btn.correct {
+            background: rgba(16, 185, 129, 0.3) !important;
+            border-color: #10b981 !important;
+            color: #6ee7b7 !important;
+        }
+        .quiz-option-btn.incorrect {
+            background: rgba(239, 68, 68, 0.3) !important;
+            border-color: #ef4444 !important;
+            color: #fca5a5 !important;
+        }
+
+        .quiz-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+        }
+        .action-btn {
+            background: #0284c7;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .action-btn:hover:not(:disabled) {
+            background: #0369a1;
+            transform: translateY(-2px);
+        }
+        .action-btn:disabled {
+            background: rgba(255, 255, 255, 0.1);
+            color: #666;
+            cursor: not-allowed;
+        }
+        .reset-quiz-btn {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid #ef4444;
+        }
+        .reset-quiz-btn:hover {
+            background: #ef4444;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div class="header-title">
+        <h1>3D Öğretmen Dersi Atlası</h1>
+        <p>6. Sınıf Sosyal Bilgiler Portalı</p>
+    </div>
+
+    <!-- 3D ÇİZİM ARAÇ ÇUBUĞU -->
+    <div class="drawing-toolbar">
+        <button class="tool-btn active" id="toolNavigate" onclick="setDrawMode('navigate')" title="Gezinme Modu"><i class="fa-solid fa-hand"></i></button>
+        <button class="tool-btn" id="toolPencil" onclick="setDrawMode('pencil')" title="Kalemle Çiz"><i class="fa-solid fa-pencil"></i></button>
+        <button class="tool-btn" id="toolEraser" onclick="setDrawMode('eraser')" title="Silgi"><i class="fa-solid fa-eraser"></i></button>
+        <button class="tool-btn" onclick="clearAllDrawings()" title="Hepsini Sil"><i class="fa-solid fa-trash-can" style="color:#ef4444;"></i></button>
+        
+        <!-- Kalem ve Silgi Ayarları Paneli -->
+        <div class="drawing-settings" id="drawSettingsPanel">
+            <div id="colorSection">
+                <div style="font-size:11px; font-weight:700; color:#aaa; text-transform:uppercase; margin-bottom:6px;">Renkler</div>
+                <div class="color-picker-grid">
+                    <div class="color-dot active" style="background:#ef4444;" onclick="setPenColor('#ef4444', this)"></div>
+                    <div class="color-dot" style="background:#22c55e;" onclick="setPenColor('#22c55e', this)"></div>
+                    <div class="color-dot" style="background:#3b82f6;" onclick="setPenColor('#3b82f6', this)"></div>
+                    <div class="color-dot" style="background:#eab308;" onclick="setPenColor('#eab308', this)"></div>
+                    <div class="color-dot" style="background:#ffffff;" onclick="setPenColor('#ffffff', this)"></div>
+                    <div class="color-dot" style="background:#a855f7;" onclick="setPenColor('#a855f7', this)"></div>
+                </div>
+            </div>
+            <div style="margin-top:6px;">
+                <div style="font-size:11px; font-weight:700; color:#aaa; text-transform:uppercase; margin-bottom:4px;" id="sizeLabel">Kalem Kalınlığı</div>
+                <input type="range" min="1" max="15" value="5" style="width:100%; cursor:pointer;" oninput="updateBrushSize(this.value)">
+            </div>
+        </div>
+    </div>
+
+    <!-- Sol Alt 2D / 3D Mod Geçiş Düğmesi -->
+    <button class="map-mode-toggle" onclick="toggleMapProjectionMode()">
+        <span id="mapModeToggleText"><i class="fa-solid fa-map"></i> 2D Düzlem Haritaya Geç</span>
+    </button>
+
+    <!-- 2D TAM EKRAN DÜZLEM HARİTA MODALI (SINIR ÇİZGİLERİ OLMADAN TEMİZ) -->
+    <div class="flat-map-container" id="flatMapContainer">
+        <svg class="flat-map-svg" id="flatMapSvg" viewBox="0 0 1000 500" preserveAspectRatio="none">
+            <image href="https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg" x="0" y="0" width="1000" height="500" preserveAspectRatio="none" opacity="0.95" />
+            <line x1="0" y1="250" x2="1000" y2="250" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="6,6" opacity="0.5" />
+        </svg>
+        <canvas id="2dCanvas"></canvas>
+    </div>
+
+    <!-- Eren Yıldız İmza -->
+    <div class="creator-signature">Created by Eren Yıldız</div>
+
+    <!-- Üst Menü Mod Düğmeleri -->
+    <div class="top-controls">
+        <button class="mode-btn active" onclick="selectTopCategory('all', this)"><i class="fa-solid fa-earth-americas"></i> Tümü</button>
+        <button class="mode-btn" onclick="selectTopCategory('continents', this)"><i class="fa-solid fa-globe"></i> Kıtalar</button>
+        <button class="mode-btn" onclick="selectTopCategory('oceans', this)"><i class="fa-solid fa-water"></i> Okyanuslar & Denizler</button>
+        <button class="mode-btn" onclick="selectTopCategory('lines', this)"><i class="fa-solid fa-ruler-horizontal"></i> Ekvator & Çizgiler</button>
+        <button class="mode-btn" onclick="selectTopCategory('turkey_neighbors', this)"><i class="fa-solid fa-flag"></i> Türkiye & Komşuları</button>
+        <button class="mode-btn exam-btn" onclick="openQuizModal()"><i class="fa-solid fa-file-pen"></i> Test Çöz (40 Soru)</button>
+    </div>
+
+    <!-- Görünmez Alt Navigasyon Çubuğu -->
+    <div class="dynamic-bottom-nav" id="bottomNav"></div>
+
+    <!-- 40 SORULUK TEST MODALI -->
+    <div class="quiz-overlay" id="quizOverlay">
+        <div class="quiz-container">
+            <div class="quiz-header">
+                <div>
+                    <h2><i class="fa-solid fa-graduation-cap"></i> 6. Sınıf Sosyal Bilgiler Coğrafya Testi</h2>
+                    <p style="font-size:12px; color:#aaa; margin-top:2px;">1500+ Soruluk Havuzdan Rastgele Seçilmiş 40 Soru</p>
+                </div>
+                <button class="close-btn" onclick="closeQuizModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="quizBody">
+                <div class="quiz-progress-bar">
+                    <div class="quiz-progress-fill" id="quizProgressFill"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#38bdf8; font-weight:600; margin-top:8px; flex-wrap:wrap; gap:8px;">
+                    <span id="questionTracker">Soru: 1 / 40 (%0 İlerleme)</span>
+                    <span id="liveStatsTracker">Doğru: 0 | Yanlış: 0 | Başarı: %0.0</span>
+                    <span id="scoreTracker">Puan: 0</span>
+                </div>
+                <div class="question-text" id="questionText">Soru yükleniyor...</div>
+                <div class="quiz-options" id="quizOptions"></div>
+                <div class="quiz-footer">
+                    <button class="action-btn reset-quiz-btn" onclick="restartQuiz()"><i class="fa-solid fa-rotate-left"></i> Soruları Sıfırla</button>
+                    <button class="action-btn" id="nextQuestionBtn" onclick="nextQuestion()" disabled>Sonraki Soru <i class="fa-solid fa-arrow-right"></i></button>
+                </div>
+            </div>
+            <div id="quizResult" style="display:none; text-align:center; padding:15px 0;">
+                <i class="fa-solid fa-trophy" style="font-size:48px; color:#facc15; margin-bottom:12px;"></i>
+                <h3 style="font-size:20px; color:#fff; margin-bottom:8px;">Sınav Tamamlandı!</h3>
+                <div id="resultSummary" style="font-size:14.5px; color:#ddd; margin-bottom:15px; line-height:1.6;"></div>
+                <button class="action-btn" onclick="restartQuiz()"><i class="fa-solid fa-rotate-right"></i> Yeni Rastgele 40 Soru Başlat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sağ Bilgi Kartı -->
+    <div class="info-card" id="infoCard">
+        <div class="info-card-header">
+            <h2 id="cardTitle">Coğrafi Bölge</h2>
+            <button class="close-btn" onclick="closeInfoCard()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="info-type" id="cardType">Kategori</div>
+        <p class="info-desc" id="cardDesc">Açıklama yükleniyor...</p>
+        <div class="rel-box" id="cardRel">Göreceli konum bilgisi burada gösterilecek.</div>
+
+        <div class="stats-grid">
+            <div class="stat-box"><div class="stat-label">Kategori / Tür</div><div class="stat-value" id="statCategory">-</div></div>
+            <div class="stat-box"><div class="stat-label">Başkent / Kıyı İlleri</div><div class="stat-value" id="statLat">-</div></div>
+        </div>
+    </div>
+
+    <!-- THREE.JS & KÜTÜPHANELER -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+
+    <script>
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
+        camera.position.set(0, 0, 320);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.rotateSpeed = 0.7;
+        controls.zoomSpeed = 1.0;
+        controls.minDistance = 140;
+        controls.maxDistance = 600;
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+        scene.add(ambientLight);
+
+        const categoryNamesTR = {
+            continents: "KITA",
+            oceans: "OKYANUS VE DENİZ",
+            lines: "EKVATOR VE ÇİZGİLER",
+            turkey_neighbors: "TÜRKİYE VE KOMŞULARI"
+        };
+
+        const atlasDB = {
+            Asya: { name: "ASYA", fullName: "Asya Kıtası", category: "continents", color: "#22c55e", type: "Dünyanın En Büyük Kıtası", desc: "Yüzölçümü ve nüfus bakımından dünyanın en büyük kıtasıdır.", rel: "Göreceli Konum: Avrupa'nın doğusunda, Afrika'nın kuzeydoğusundadır.", lat: "Çeşitli Ülkeler", latDeg: 35, lonDeg: 95 },
+            Avrupa: { name: "AVRUPA", fullName: "Avrupa Kıtası", category: "continents", color: "#3b82f6", type: "Gelişmiş Kültür Kıtası", desc: "Asya kıtasının batısında yer alan gelişmiş kıtadır.", rel: "Göreceli Konum: Asya'nın batısında yer alır.", lat: "Çeşitli Ülkeler", latDeg: 50, lonDeg: 15 },
+            Afrika: { name: "AFRİKA", fullName: "Afrika Kıtası", category: "continents", color: "#f97316", type: "Sıcak İklim Kıtası", desc: "Dünyanın ikinci büyük kıtasıdır. Ekvator ortasından geçer.", rel: "Göreceli Konum: Avrupa'nın güneyinde yer alır.", lat: "Mısır, Nijerya vb.", latDeg: 5, lonDeg: 20 },
+            KuzeyAmerika: { name: "K. AMERİKA", fullName: "Kuzey Amerika Kıtası", category: "continents", color: "#a855f7", type: "Batı Yarım Küre Kıtası", desc: "Kuzey ve Batı Yarım Küre'de bulunan kıtadır.", rel: "Göreceli Konum: Pasifik ile Atlas Okyanusu arasındadır.", lat: "ABD, Kanada, Meksika", latDeg: 45, lonDeg: -100 },
+            GuneyAmerika: { name: "G. AMERİKA", fullName: "Güney Amerika Kıtası", category: "continents", color: "#ec4899", type: "Biyoçeşitlilik Kıtası", desc: "Büyük kısmı Güney Yarım Küre'dedir. Amazon Ormanları buradadır.", rel: "Göreceli Konum: Kuzey Amerika'nın güneyindedir.", lat: "Brezilya, Arjantin vb.", latDeg: -15, lonDeg: -60 },
+            Antarktika: { name: "ANTARKTİKA", fullName: "Antarktika Kıtası", category: "continents", color: "#06b6d4", type: "Buzul ve Çöl Kıtası", desc: "Güney Kutbu'nda yer alan, yerleşik insan nüfusu olmayan, tamamen buzullarla kaplı kıtadır.", rel: "Göreceli Konum: Dünyanın en güney ucundadır.", lat: "Bilimsel Araştırma Üsleri", latDeg: -80, lonDeg: 0 },
+            Pasifik: { name: "BÜYÜK OKYANUS", fullName: "Büyük Okyanus (Pasifik)", category: "oceans", color: "#0284c7", type: "Dünyanın En Büyük Okyanusu", desc: "Dünyanın en büyük ve en derin okyanustur.", rel: "Göreceli Konum: Asya ve Amerika arasındadır.", lat: "Küresel Su Kütlesi", latDeg: 10, lonDeg: -160 },
+            Atlantik: { name: "ATLAS OKYANUSU", fullName: "Atlas Okyanusu (Atlantik)", category: "oceans", color: "#2563eb", type: "İkinci Büyük Okyanus", desc: "Amerika ile Avrupa-Afrika arasındaki ticari okyanustur.", rel: "Göreceli Konum: Amerika ile Avrupa arasındadır.", lat: "Küresel Su Kütlesi", latDeg: 25, lonDeg: -40 },
+            Hint: { name: "HİNT OKYANUSU", fullName: "Hint Okyanusu", category: "oceans", color: "#0d9488", type: "Sıcak Su Okyanusu", desc: "Asya'nın güneyindeki sıcak okyanustur.", rel: "Göreceli Konum: Asya'nın güneyindedir.", lat: "Küresel Su Kütlesi", latDeg: -15, lonDeg: 75 },
+            Marmara: { name: "MARMARA", fullName: "Marmara Denizi", category: "oceans", color: "#38bdf8", type: "Türkiye'nin İç Denizi", desc: "Türkiye'nin tek iç denizidir.", rel: "Göreceli Konum: Trakya ve Anadolu arasındadır.", lat: "İstanbul, Bursa...", latDeg: 40.7, lonDeg: 28.0 },
+            Karadeniz: { name: "KARADENİZ", fullName: "Karadeniz", category: "oceans", color: "#1e3a8a", type: "Kuzey Kıyı Denizimiz", desc: "Türkiye'nin kuzey kıyısındaki denizdir.", rel: "Göreceli Konum: Türkiye'nin kuzeyindedir.", lat: "Trabzon, Samsun...", latDeg: 43.2, lonDeg: 34.0 },
+            Akdeniz: { name: "AKDENİZ", fullName: "Akdeniz", category: "oceans", color: "#0284c7", type: "Güney Kıyı Denizimiz", desc: "Türkiye'nin güney kıyı denizidir.", rel: "Göreceli Konum: Türkiye'nin güneyindedir.", lat: "Antalya, Mersin...", latDeg: 35.0, lonDeg: 25.0 },
+            Ege: { name: "EGE DENİZİ", fullName: "Ege Denizi", category: "oceans", color: "#0ea5e9", type: "Batı Kıyı Denizimiz", desc: "Girintili çıkıntılı adalar denizimizdir.", rel: "Göreceli Konum: Türkiye'nin batısındadır.", lat: "İzmir, Muğla...", latDeg: 38.5, lonDeg: 25.5 },
+            Ekvator: { name: "EKVATOR (0°)", fullName: "Ekvator Çizgisi (0° Paraleli)", category: "lines", color: "#ef4444", type: "Başlangıç Paraleli", desc: "Dünyayı Kuzey ve Güney olarak ikiye böler.", rel: "Göreceli Konum: Merkezdendir.", lat: "0° Paraleli", latDeg: 0, lonDeg: 0 },
+            Turkiye: { name: "TÜRKİYE", fullName: "Türkiye Cumhuriyeti", category: "turkey_neighbors", color: "#e11d48", type: "Anavatan Ülke", desc: "Asya ve Avrupa'yı bağlayan cumhuriyettir.", rel: "Göreceli Konum: Stratejik merkezdedir.", lat: "Ankara (Başkent)", latDeg: 39.0, lonDeg: 35.2 },
+            Yunanistan: { name: "YUNANİSTAN", fullName: "Yunanistan", category: "turkey_neighbors", color: "#eab308", type: "Komşu", desc: "Batı komşumuzdur.", rel: "Göreceli Konum: Batıdadır.", lat: "Atina", latDeg: 39.0, lonDeg: 22.0 },
+            Bulgaristan: { name: "BULGARİSTAN", fullName: "Bulgaristan", category: "turkey_neighbors", color: "#f59e0b", type: "Komşu", desc: "Kuzeybatı komşumuzdur.", rel: "Göreceli Konum: Kuzeybatıdadır.", lat: "Sofya", latDeg: 42.5, lonDeg: 25.5 },
+            Gurcistan: { name: "GÜRCİSTAN", fullName: "Gürcistan", category: "turkey_neighbors", color: "#eab308", type: "Komşu", desc: "Kuzeydoğu komşumuzdur.", rel: "Göreceli Konum: Kuzeydoğudadır.", lat: "Tiflis", latDeg: 42.2, lonDeg: 43.5 },
+            Ermenistan: { name: "ERMENİSTAN", fullName: "Ermenistan", category: "turkey_neighbors", color: "#d97706", type: "Komşu", desc: "Doğu komşumuzdur.", rel: "Göreceli Konum: Doğudadır.", lat: "Erivan", latDeg: 40.2, lonDeg: 44.8 },
+            Azerbaycan: { name: "AZERBAYCAN", fullName: "Azerbaycan", category: "turkey_neighbors", color: "#facc15", type: "Kardeş Ülke", desc: "Nahçıvan sınırımızdır.", rel: "Göreceli Konum: Doğudadır.", lat: "Bakü", latDeg: 40.3, lonDeg: 48.5 },
+            Iran: { name: "İRAN", fullName: "İran", category: "turkey_neighbors", color: "#ca8a04", type: "Komşu", desc: "Köklü doğu komşumuzdur.", rel: "Göreceli Konum: Doğudadır.", lat: "Tahran", latDeg: 32.5, lonDeg: 53.0 },
+            Irak: { name: "İRAK", fullName: "İrak", category: "turkey_neighbors", color: "#eab308", type: "Komşu", desc: "Güneydoğu komşumuzdur.", rel: "Göreceli Konum: Güneydoğudadır.", lat: "Bağdat", latDeg: 33.2, lonDeg: 43.8 },
+            Suriye: { name: "SURİYE", fullName: "Suriye", category: "turkey_neighbors", color: "#f59e0b", type: "Komşu", desc: "Güney komşumuzdur.", rel: "Göreceli Konum: Güneyktedir.", lat: "Şam", latDeg: 35.2, lonDeg: 38.5 }
+        };
+
+        const regionBoundaries = {
+            Asya: [[77, 26], [75, 45], [74, 80], [72, 110], [68, 140], [60, 170], [52, 160], [40, 140], [35, 125], [22, 120], [12, 105], [1, 100], [-8, 110], [5, 100], [10, 98], [15, 75], [25, 60], [12, 45], [20, 38], [30, 35], [38, 26], [42, 28], [50, 40], [60, 50], [70, 35], [77, 26]],
+            Avrupa: [[71, -10], [71, 30], [68, 45], [60, 55], [52, 40], [45, 30], [41, 29], [37, 24], [36, 15], [36, -5], [43, -9], [50, -5], [58, -5], [65, -15], [71, -10]],
+            Afrika: [[37, 10], [35, 22], [32, 35], [12, 43], [11, 51], [-12, 40], [-25, 33], [-35, 20], [-30, 17], [-15, 12], [0, 9], [5, -5], [15, -17], [32, -5], [37, 10]],
+            KuzeyAmerika: [[83, -70], [75, -60], [65, -60], [50, -55], [30, -80], [15, -90], [8, -78], [15, -92], [23, -110], [34, -120], [55, -135], [68, -165], [72, -150], [80, -90], [83, -70]],
+            GuneyAmerika: [[12, -72], [8, -58], [2, -50], [-5, -35], [-22, -41], [-34, -53], [-54, -68], [-52, -75], [-18, -71], [-5, -81], [9, -79], [12, -72]],
+            Antarktika: [[-65, -180], [-68, -120], [-72, -60], [-70, 0], [-68, 60], [-70, 120], [-65, 180], [-89, 0], [-65, -180]],
+            Pasifik: [[55, -170], [50, -130], [20, -110], [-20, -100], [-50, -90], [-55, 160], [-20, 150], [0, 130], [20, 122], [40, 145], [55, -170]],
+            Atlantik: [[60, -45], [55, -20], [20, -20], [0, -10], [-35, 15], [-50, -60], [-20, -35], [15, -70], [30, -75], [45, -60], [60, -45]],
+            Hint: [[20, 60], [15, 80], [0, 95], [-10, 115], [-35, 115], [-50, 100], [-50, 30], [-35, 20], [0, 42], [12, 43], [20, 60]],
+            Marmara: [[41.2, 26.8], [41.2, 29.8], [40.3, 29.8], [40.3, 26.8], [41.2, 26.8]],
+            Karadeniz: [[46.5, 30.5], [45.0, 38.5], [41.5, 41.5], [41.2, 28.5], [43.5, 28.5], [46.5, 30.5]],
+            Akdeniz: [[37.0, 5.0], [36.0, 35.5], [31.0, 34.0], [30.5, 18.0], [37.0, 11.0], [37.0, 5.0]],
+            Ege: [[40.5, 23.0], [40.5, 26.8], [36.2, 27.5], [36.2, 23.0], [40.5, 23.0]],
+            Turkiye: [[42.1, 26.0], [41.8, 30.0], [41.5, 36.0], [41.1, 41.5], [39.7, 44.8], [38.5, 44.0], [37.1, 44.6], [36.9, 40.0], [36.5, 36.1], [36.2, 32.0], [36.5, 29.2], [38.5, 26.2], [40.6, 26.0], [42.1, 26.0]],
+            Yunanistan: [[41.7, 23.0], [41.2, 26.3], [39.5, 26.2], [38.0, 24.5], [36.4, 23.0], [38.5, 20.5], [41.7, 23.0]],
+            Bulgaristan: [[44.2, 22.6], [43.7, 28.6], [41.9, 28.0], [41.3, 26.1], [42.0, 22.6], [44.2, 22.6]],
+            Gurcistan: [[43.5, 40.0], [43.5, 44.0], [41.3, 46.5], [41.5, 41.5], [43.5, 40.0]],
+            Azerbaycan: [[41.9, 45.0], [41.8, 50.5], [39.5, 50.0], [38.4, 48.8], [39.0, 44.8], [41.9, 45.0]],
+            Iran: [[39.7, 44.8], [38.5, 48.8], [38.0, 58.0], [25.0, 61.5], [29.8, 48.5], [33.5, 46.0], [39.7, 44.8]],
+            Irak: [[37.3, 42.8], [36.0, 46.0], [30.0, 48.0], [29.0, 46.0], [33.0, 39.0], [37.3, 42.8]],
+            Suriye: [[37.3, 42.3], [34.0, 41.0], [32.7, 36.0], [34.5, 35.8], [36.5, 36.0], [37.3, 42.3]]
+        };
+
+        const earthGroup = new THREE.Group();
+        scene.add(earthGroup);
+
+        const earthRadius = 100;
+        const drawingsGroup = new THREE.Group();
+        earthGroup.add(drawingsGroup);
+
+        const eraserCursorGeo = new THREE.RingGeometry(0.8, 1.3, 32);
+        const eraserCursorMat = new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide, transparent: true, opacity: 0.9, depthTest: false });
+        const eraserCursorMesh = new THREE.Mesh(eraserCursorGeo, eraserCursorMat);
+        eraserCursorMesh.visible = false;
+        eraserCursorMesh.renderOrder = 999;
+        earthGroup.add(eraserCursorMesh);
+
+        const globeGeo = new THREE.SphereGeometry(earthRadius, 64, 64);
+        const textureLoader = new THREE.TextureLoader();
+        const earthMat = new THREE.MeshBasicMaterial({
+            map: textureLoader.load('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg')
+        });
+        const earthMesh = new THREE.Mesh(globeGeo, earthMat);
+        earthGroup.add(earthMesh);
+
+        const equatorGeo = new THREE.BufferGeometry();
+        const eqPoints = [];
+        for (let i = 0; i <= 128; i++) {
+            const theta = (i / 128) * Math.PI * 2;
+            eqPoints.push(new THREE.Vector3(Math.cos(theta) * (earthRadius + 1.2), 0, Math.sin(theta) * (earthRadius + 1.2)));
+        }
+        equatorGeo.setFromPoints(eqPoints);
+        const equatorLine = new THREE.Line(equatorGeo, new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 3 }));
+        equatorLine.visible = false;
+        earthGroup.add(equatorLine);
+
+        function latLonToVector3(lat, lon, radius, outVector) {
+            const phi = (90 - lat) * (Math.PI / 180);
+            const theta = (lon + 180) * (Math.PI / 180);
+            outVector.x = -(radius * Math.sin(phi) * Math.cos(theta));
+            outVector.z = (radius * Math.sin(phi) * Math.sin(theta));
+            outVector.y = (radius * Math.cos(phi));
+        }
+
+        const boundaryMeshes = {};
+        const hitMeshes = [];
+        let activeSelectedKey = null;
+        let currentActiveCategory = 'all';
+
+        Object.keys(regionBoundaries).forEach(key => {
+            const coords = regionBoundaries[key];
+            const linePoints = [];
+            const item = atlasDB[key];
+            
+            coords.forEach(pt => {
+                const vec = new THREE.Vector3();
+                latLonToVector3(pt[0], pt[1], earthRadius + 1.2, vec);
+                linePoints.push(vec);
+            });
+
+            const bGeo = new THREE.BufferGeometry().setFromPoints(linePoints);
+            const lineColorHex = (item && item.color) ? parseInt(item.color.replace('#', '0x')) : 0x4ade80;
+
+            const bMat = new THREE.LineBasicMaterial({ color: lineColorHex, linewidth: 2, transparent: true, opacity: 0.0 });
+            const borderLine = new THREE.Line(bGeo, bMat);
+
+            let centerLat = 0, centerLon = 0;
+            coords.forEach(pt => { centerLat += pt[0]; centerLon += pt[1]; });
+            centerLat /= coords.length;
+            centerLon /= coords.length;
+
+            const centerVec = new THREE.Vector3();
+            latLonToVector3(centerLat, centerLon, earthRadius + 0.8, centerVec);
+
+            const geom = new THREE.BufferGeometry();
+            const positions = [];
+
+            for (let i = 0; i < coords.length - 1; i++) {
+                const v1 = new THREE.Vector3();
+                const v2 = new THREE.Vector3();
+                latLonToVector3(coords[i][0], coords[i][1], earthRadius + 0.8, v1);
+                latLonToVector3(coords[i+1][0], coords[i+1][1], earthRadius + 0.8, v2);
+
+                positions.push(centerVec.x, centerVec.y, centerVec.z);
+                positions.push(v1.x, v1.y, v1.z);
+                positions.push(v2.x, v2.y, v2.z);
+            }
+
+            geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            const fillMat = new THREE.MeshBasicMaterial({ color: lineColorHex, transparent: true, opacity: 0.0, side: THREE.DoubleSide });
+            const fillMesh = new THREE.Mesh(geom, fillMat);
+            fillMesh.userData = { id: key, category: item ? item.category : 'all' };
+
+            const group = new THREE.Group();
+            group.add(borderLine);
+            group.add(fillMesh);
+
+            earthGroup.add(group);
+            boundaryMeshes[key] = group;
+            hitMeshes.push(fillMesh);
+        });
+
+        // 3D Küre Yüzeyine Eğime Uygun Sabit Etiketler (Küre Eğriliğine Göre Eğimli)
+        const labelObjects = {};
+        Object.keys(atlasDB).forEach(key => {
+            const item = atlasDB[key];
+            const pos = new THREE.Vector3();
+            latLonToVector3(item.latDeg, item.lonDeg, earthRadius + 2.2, pos);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 360;
+            canvas.height = 90;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 360, 90);
+
+            const isLargeArea = ['Asya', 'Avrupa', 'Afrika', 'KuzeyAmerika', 'GuneyAmerika', 'Antarktika', 'Pasifik', 'Atlantik', 'Hint'].includes(key);
+            const fontSize = isLargeArea ? 34 : 22;
+
+            ctx.fillStyle = item.color || '#ffffff';
+            ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(item.name, 180, 45);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+            
+            const planeWidth = isLargeArea ? 28 : 18;
+            const planeHeight = isLargeArea ? 7.0 : 4.5;
+            
+            const geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
+            const labelMesh = new THREE.Mesh(geometry, material);
+
+            labelMesh.position.copy(pos);
+            
+            const normal = pos.clone().normalize();
+            const targetPos = pos.clone().add(normal);
+            labelMesh.lookAt(targetPos);
+            labelMesh.rotateZ(0);
+
+            labelMesh.userData = { id: key, category: item.category };
+
+            earthGroup.add(labelMesh);
+            labelObjects[key] = labelMesh;
+        });
+
+        const flatMapRegions2D = {
+            Asya: { x1: 550, y1: 50, x2: 950, y2: 300 },
+            Avrupa: { x1: 450, y1: 50, x2: 600, y2: 200 },
+            Afrika: { x1: 450, y1: 200, x2: 650, y2: 400 },
+            KuzeyAmerika: { x1: 100, y1: 50, x2: 380, y2: 250 },
+            GuneyAmerika: { x1: 280, y1: 250, x2: 450, y2: 450 },
+            Antarktika: { x1: 50, y1: 450, x2: 950, y2: 490 },
+            Pasifik: { x1: 1, y1: 100, x2: 120, y2: 350 },
+            Atlantik: { x1: 380, y1: 150, x2: 480, y2: 350 },
+            Hint: { x1: 650, y1: 250, x2: 800, y2: 400 },
+            Marmara: { x1: 520, y1: 175, x2: 550, y2: 195 },
+            Karadeniz: { x1: 540, y1: 150, x2: 590, y2: 180 },
+            Akdeniz: { x1: 500, y1: 180, x2: 580, y2: 220 },
+            Ege: { x1: 500, y1: 175, x2: 530, y2: 205 },
+            Turkiye: { x1: 530, y1: 175, x2: 580, y2: 210 },
+            Yunanistan: { x1: 510, y1: 180, x2: 535, y2: 210 },
+            Bulgaristan: { x1: 525, y1: 160, x2: 555, y2: 185 },
+            Gurcistan: { x1: 570, y1: 165, x2: 600, y2: 190 },
+            Ermenistan: { x1: 580, y1: 180, x2: 605, y2: 205 },
+            Azerbaycan: { x1: 595, y1: 175, x2: 630, y2: 205 },
+            Iran: { x1: 600, y1: 185, x2: 650, y2: 240 },
+            Irak: { x1: 575, y1: 200, x2: 615, y2: 245 },
+            Suriye: { x1: 560, y1: 195, x2: 595, y2: 230 }
+        };
+
+        function selectTopCategory(category, btnElem) {
+            currentActiveCategory = category;
+            document.querySelectorAll('.top-controls .mode-btn').forEach(b => {
+                if (!b.classList.contains('exam-btn')) b.classList.remove('active');
+            });
+            if (btnElem) btnElem.classList.add('active');
+
+            equatorLine.visible = (category === 'lines');
+
+            if (!is2DMode) {
+                Object.keys(labelObjects).forEach(key => {
+                    const sprite = labelObjects[key];
+                    if (category === 'all' || sprite.userData.category === category) {
+                        sprite.visible = true;
+                    } else {
+                        sprite.visible = false;
+                    }
+                });
+            }
+
+            buildBottomNav(category);
+        }
+
+        function focusLocation(key, btnElem) {
+            const item = atlasDB[key];
+            if (!item) return;
+
+            activeSelectedKey = key;
+
+            if (btnElem) {
+                document.querySelectorAll('.dynamic-bottom-nav .nav-btn').forEach(b => b.classList.remove('active'));
+                btnElem.classList.add('active');
+            }
+
+            if (!is2DMode) {
+                Object.keys(boundaryMeshes).forEach(k => {
+                    const grp = boundaryMeshes[k];
+                    if (k === activeSelectedKey) {
+                        grp.visible = true;
+                        grp.userData.line.material.opacity = 1.0;
+                        grp.userData.fill.material.opacity = 0.3;
+                    } else {
+                        grp.userData.line.material.opacity = 0.0;
+                        grp.userData.fill.material.opacity = 0.0;
+                    }
+                });
+
+                const targetPos = new THREE.Vector3();
+                latLonToVector3(item.latDeg, item.lonDeg, earthRadius, targetPos);
+                const camTargetPos = targetPos.clone().multiplyScalar(2.2);
+
+                new TWEEN.Tween(camera.position).to({ x: camTargetPos.x, y: camTargetPos.y + 20, z: camTargetPos.z }, 1800).easing(TWEEN.Easing.Cubic.Out).start();
+                new TWEEN.Tween(controls.target).to({ x: 0, y: 0, z: 0 }, 1800).easing(TWEEN.Easing.Cubic.Out).start();
+            }
+
+            openInfoCard(item);
+        }
+
+        function openInfoCard(item) {
+            document.getElementById('cardTitle').innerText = item.fullName || item.name;
+            document.getElementById('cardType').innerText = categoryNamesTR[item.category] || "BÖLGE";
+            document.getElementById('cardDesc').innerText = item.desc;
+            document.getElementById('cardRel').innerText = item.rel;
+            document.getElementById('statCategory').innerText = item.type;
+            document.getElementById('statLat').innerText = item.lat;
+            document.getElementById('infoCard').classList.add('open');
+        }
+
+        function closeInfoCard() {
+            activeSelectedKey = null;
+            document.getElementById('infoCard').classList.remove('open');
+            document.querySelectorAll('.dynamic-bottom-nav .nav-btn').forEach(b => b.classList.remove('active'));
+
+            Object.keys(boundaryMeshes).forEach(k => {
+                boundaryMeshes[k].userData.line.material.opacity = 0.0;
+                boundaryMeshes[k].userData.fill.material.opacity = 0.0;
+            });
+        }
+
+        function buildBottomNav(category) {
+            const nav = document.getElementById('bottomNav');
+            nav.innerHTML = '';
+
+            let keys = Object.keys(atlasDB);
+            if (category !== 'all') {
+                keys = keys.filter(k => atlasDB[k].category === category);
+            }
+
+            keys.forEach(key => {
+                const item = atlasDB[key];
+                const btn = document.createElement('button');
+                btn.className = 'nav-btn';
+                btn.onclick = (e) => focusLocation(key, e.currentTarget);
+                nav.appendChild(btn);
+            });
+        }
+
+        let hoveredKey = null;
+        let isMouseDown = false;
+        let mouseDragStart = { x: 0, y: 0 };
+        let isDraggingWorld = false;
+
+        let activeToolMode = 'navigate';
+        let currentPenColor = 0xef4444;
+        let currentPenColorCss = '#ef4444';
+        let currentBrushSize = 5;
+        let isDrawingOnGlobe = false;
+        let activeLinePoints = [];
+
+        let is2DMode = false;
+
+        const canvas2d = document.getElementById('2dCanvas');
+        const ctx2d = canvas2d.getContext('2d');
+        let isDrawing2D = false;
+
+        function resize2DCanvas() {
+            canvas2d.width = window.innerWidth;
+            canvas2d.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize2DCanvas);
+        resize2DCanvas();
+
+        function setDrawMode(mode) {
+            activeToolMode = mode;
+            document.querySelectorAll('.drawing-toolbar .tool-btn').forEach(b => b.classList.remove('active'));
+            const panel = document.getElementById('drawSettingsPanel');
+            const colorSection = document.getElementById('colorSection');
+            const sizeLabel = document.getElementById('sizeLabel');
+
+            eraserCursorMesh.visible = false;
+
+            if (mode === 'navigate') {
+                document.getElementById('toolNavigate').classList.add('active');
+                panel.style.display = 'none';
+                controls.enabled = true;
+                canvas2d.style.pointerEvents = 'none';
+                canvas2d.classList.remove('drawing-active');
+            } else if (mode === 'pencil') {
+                document.getElementById('toolPencil').classList.add('active');
+                panel.style.display = 'flex';
+                colorSection.style.display = 'block';
+                sizeLabel.innerText = "Kalem Kalınlığı";
+                controls.enabled = false;
+                canvas2d.style.pointerEvents = 'auto';
+                canvas2d.classList.add('drawing-active');
+            } else if (mode === 'eraser') {
+                document.getElementById('toolEraser').classList.add('active');
+                panel.style.display = 'flex';
+                colorSection.style.display = 'none';
+                sizeLabel.innerText = "Silgi Çapı";
+                controls.enabled = false;
+                canvas2d.style.pointerEvents = 'auto';
+                canvas2d.classList.add('drawing-active');
+            }
+        }
+
+        function setPenColor(colorHex, elem) {
+            currentPenColorCss = colorHex;
+            currentPenColor = parseInt(colorHex.replace('#', '0x'));
+            document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+            if (elem) elem.classList.add('active');
+        }
+
+        function updateBrushSize(val) {
+            currentBrushSize = parseFloat(val);
+            updateEraserCursorScale();
+        }
+
+        function updateEraserCursorScale() {
+            const scaleVal = currentBrushSize * 0.8;
+            eraserCursorMesh.scale.set(scaleVal, scaleVal, scaleVal);
+        }
+
+        canvas2d.addEventListener('mousedown', (e) => {
+            if (activeToolMode === 'navigate') {
+                if (is2DMode) {
+                    const rect = canvas2d.getBoundingClientRect();
+                    const clickX = (e.clientX - rect.left) / rect.width * 1000;
+                    const clickY = (e.clientY - rect.top) / rect.height * 500;
+
+                    for (const key in flatMapRegions2D) {
+                        const box = flatMapRegions2D[key];
+                        if (clickX >= box.x1 && clickX <= box.x2 && clickY >= box.y1 && clickY <= box.y2) {
+                            if (currentActiveCategory === 'all' || atlasDB[key].category === currentActiveCategory) {
+                                focusLocation(key);
+                                break;
+                            }
+                        }
+                    }
+                }
+                return;
+            }
+
+            if (is2DMode) {
+                isDrawing2D = true;
+                ctx2d.beginPath();
+                ctx2d.moveTo(e.clientX, e.clientY);
+            }
+        });
+
+        canvas2d.addEventListener('mousemove', (e) => {
+            if (activeToolMode === 'navigate') return;
+            if (is2DMode && isDrawing2D) {
+                if (activeToolMode === 'pencil') {
+                    ctx2d.globalCompositeOperation = 'source-over';
+                    ctx2d.strokeStyle = currentPenColorCss;
+                    ctx2d.lineWidth = currentBrushSize * 2.5;
+                    ctx2d.lineCap = 'round';
+                    ctx2d.lineJoin = 'round';
+                    ctx2d.lineTo(e.clientX, e.clientY);
+                    ctx2d.stroke();
+                } else if (activeToolMode === 'eraser') {
+                    ctx2d.globalCompositeOperation = 'destination-out';
+                    ctx2d.beginPath();
+                    ctx2d.arc(e.clientX, e.clientY, currentBrushSize * 6, 0, Math.PI * 2);
+                    ctx2d.fill();
+                }
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDrawing2D = false;
+        });
+
+        function toggleMapProjectionMode() {
+            is2DMode = !is2DMode;
+            const flatContainer = document.getElementById('flatMapContainer');
+            const toggleText = document.getElementById('mapModeToggleText');
+            const canvas3D = document.getElementById('canvas-container');
+
+            if (is2DMode) {
+                flatContainer.style.display = 'block';
+                canvas3D.style.display = 'none';
+                toggleText.innerHTML = `<i class="fa-solid fa-globe"></i> 3D Küre Atlasına Geç`;
+                canvas2d.style.pointerEvents = 'auto';
+
+                Object.keys(labelObjects).forEach(key => {
+                    labelObjects[key].visible = false;
+                });
+            } else {
+                flatContainer.style.display = 'none';
+                canvas3D.style.display = 'block';
+                toggleText.innerHTML = `<i class="fa-solid fa-map"></i> 2D Düzlem Haritaya Geç`;
+                canvas2d.style.pointerEvents = 'auto';
+
+                selectTopCategory(currentActiveCategory, document.querySelector('.top-controls .mode-btn.active'));
+            }
+        }
+
+        function clearAllDrawings() {
+            while (drawingsGroup.children.length > 0) {
+                const obj = drawingsGroup.children[0];
+                drawingsGroup.remove(obj);
+            }
+            ctx2d.clearRect(0, 0, canvas2d.width, canvas2d.height);
+        }
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        window.addEventListener('mousedown', (e) => {
+            if (e.target.closest('#infoCard') || e.target.closest('.dynamic-bottom-nav') || e.target.closest('.top-controls') || e.target.closest('.header-title') || e.target.closest('#quizOverlay') || e.target.closest('.drawing-toolbar') || e.target.closest('.map-mode-toggle')) {
+                return;
+            }
+
+            if (is2DMode) return;
+
+            isMouseDown = true;
+            mouseDragStart = { x: e.clientX, y: e.clientY };
+            isDraggingWorld = false;
+
+            if (activeToolMode === 'pencil') {
+                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObject(earthMesh);
+
+                if (intersects.length > 0) {
+                    isDrawingOnGlobe = true;
+                    const startPt = earthGroup.worldToLocal(intersects[0].point.clone());
+                    startPt.multiplyScalar(1.008);
+                    activeLinePoints = [startPt];
+                }
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (is2DMode) return;
+
+            if (isMouseDown) {
+                const dist = Math.hypot(e.clientX - mouseDragStart.x, e.clientY - mouseDragStart.y);
+                if (dist > 5) isDraggingWorld = true;
+            }
+
+            if (activeToolMode === 'eraser') {
+                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObject(earthMesh);
+
+                if (intersects.length > 0) {
+                    eraserCursorMesh.visible = true;
+                    const hitPt = intersects[0].point;
+                    const hitNormal = intersects[0].face.normal.clone().transformDirection(earthMesh.matrixWorld);
+
+                    eraserCursorMesh.position.copy(earthGroup.worldToLocal(hitPt.clone().add(hitNormal.clone().multiplyScalar(0.2))));
+                    eraserCursorMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), hitNormal);
+
+                    if (isMouseDown) {
+                        const localHit = earthGroup.worldToLocal(hitPt.clone());
+                        const eraseRadius = currentBrushSize * 1.5;
+
+                        for (let i = drawingsGroup.children.length - 1; i >= 0; i--) {
+                            const child = drawingsGroup.children[i];
+                            if (child.position.distanceTo(localHit) < eraseRadius) {
+                                drawingsGroup.remove(child);
+                            }
+                        }
+                    }
+                } else {
+                    eraserCursorMesh.visible = false;
+                }
+                return;
+            }
+
+            if (isDrawingOnGlobe && activeToolMode === 'pencil') {
+                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObject(earthMesh);
+
+                if (intersects.length > 0) {
+                    const localPt = earthGroup.worldToLocal(intersects[0].point.clone());
+                    localPt.multiplyScalar(1.008);
+                    
+                    const lastPt = activeLinePoints[activeLinePoints.length - 1];
+                    if (lastPt.distanceTo(localPt) > 0.4) {
+                        activeLinePoints.push(localPt);
+
+                        const segmentGeo = new THREE.CylinderGeometry(currentBrushSize * 0.25, currentBrushSize * 0.25, lastPt.distanceTo(localPt), 8);
+                        const segmentMat = new THREE.MeshBasicMaterial({ color: currentPenColor });
+                        const segmentMesh = new THREE.Mesh(segmentGeo, segmentMat);
+
+                        const midPt = new THREE.Vector3().addVectors(lastPt, localPt).multiplyScalar(0.5);
+                        segmentMesh.position.copy(midPt);
+                        segmentMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), localPt.clone().sub(lastPt).normalize());
+
+                        drawingsGroup.add(segmentMesh);
+                    }
+                }
+                return;
+            }
+
+            if (activeToolMode !== 'navigate') return;
+
+            if (e.target.closest('#infoCard') || e.target.closest('.dynamic-bottom-nav') || e.target.closest('.top-controls') || e.target.closest('#quizOverlay') || e.target.closest('.drawing-toolbar') || e.target.closest('.map-mode-toggle')) {
+                return;
+            }
+
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects([...Object.values(labelObjects), ...hitMeshes]);
+
+            if (intersects.length > 0) {
+                const hitObj = intersects[0].object;
+                const hitKey = hitObj.userData.id;
+
+                if (hoveredKey !== hitKey) {
+                    if (hoveredKey && boundaryMeshes[hoveredKey] && hoveredKey !== activeSelectedKey) {
+                        const prevGroup = boundaryMeshes[hoveredKey];
+                        prevGroup.userData.line.material.opacity = 0.0;
+                        prevGroup.userData.fill.material.opacity = 0.0;
+                    }
+
+                    hoveredKey = hitKey;
+
+                    if (boundaryMeshes[hitKey]) {
+                        const curGroup = boundaryMeshes[hitKey];
+                        curGroup.userData.line.material.opacity = 1.0;
+                        curGroup.userData.fill.material.opacity = 0.25;
+                    }
+                }
+            } else {
+                if (hoveredKey && boundaryMeshes[hoveredKey] && hoveredKey !== activeSelectedKey) {
+                    const prevGroup = boundaryMeshes[hoveredKey];
+                    prevGroup.userData.line.material.opacity = 0.0;
+                    prevGroup.userData.fill.material.opacity = 0.0;
+                }
+                hoveredKey = null;
+            }
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            isMouseDown = false;
+            isDrawingOnGlobe = false;
+            
+            if (isDraggingWorld) {
+                isDraggingWorld = false;
+                return;
+            }
+
+            if (is2DMode || activeToolMode !== 'navigate') return;
+
+            if (e.target.closest('#infoCard') || e.target.closest('.dynamic-bottom-nav') || e.target.closest('.top-controls') || e.target.closest('.header-title') || e.target.closest('#quizOverlay') || e.target.closest('.drawing-toolbar') || e.target.closest('.map-mode-toggle')) {
+                return;
+            }
+
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects([...Object.values(labelObjects), ...hitMeshes]);
+
+            if (intersects.length > 0) {
+                const clickedKey = intersects[0].object.userData.id;
+                focusLocation(clickedKey);
+            }
+        });
+
+        let quizQuestions = [
+            { q: "Dünyanın en büyük kıtası hangisidir?", options: ["Asya", "Avrupa", "Afrika", "Kuzey Amerika"], correct: 0 },
+            { q: "Türkiye'nin tek iç denizi hangisidir?", options: ["Karadeniz", "Ege Denizi", "Marmara Denizi", "Akdeniz"], correct: 2 },
+            { q: "Başlangıç paraleli kabul edilen hayali çizgi hangisidir?", options: ["Yengeç Dönencesi", "Ekvator", "Oğlak Dönencesi", "Greenwich"], correct: 1 },
+            { q: "Güney Kutbu'nda yer alan ve insan nüfusu olmayan kıta hangisidir?", options: ["Antarktika", "Okyanusya", "Güney Amerika", "Afrika"], correct: 0 },
+            { q: "Türkiye'nin doğusunda yer alan kardeş ülke hangisidir?", options: ["Yunanistan", "Bulgaristan", "Azerbaycan", "Suriye"], correct: 2 },
+            { q: "Dünyanın en büyük ve en derin okyanusu hangisidir?", options: ["Atlas Okyanusu", "Büyük Okyanus (Pasifik)", "Hint Okyanusu", "Arktik Okyanusu"], correct: 1 }
+        ];
+
+        let currentQuestionIdx = 0;
+        let score = 0;
+        let correctCount = 0;
+        let incorrectCount = 0;
+        let selectedOption = null;
+
+        function openQuizModal() {
+            document.getElementById('quizOverlay').style.display = 'flex';
+            restartQuiz();
+        }
+
+        function closeQuizModal() {
+            document.getElementById('quizOverlay').style.display = 'none';
+        }
+
+        function restartQuiz() {
+            currentQuestionIdx = 0;
+            score = 0;
+            correctCount = 0;
+            incorrectCount = 0;
+            document.getElementById('quizBody').style.display = 'block';
+            document.getElementById('quizResult').style.display = 'none';
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            selectedOption = null;
+            const qData = quizQuestions[currentQuestionIdx];
+            const total = quizQuestions.length;
+            const progress = Math.round((currentQuestionIdx / total) * 100);
+
+            document.getElementById('quizProgressFill').style.width = `${progress}%`;
+            document.getElementById('questionTracker').innerText = `Soru: ${currentQuestionIdx + 1} / ${total} (%${progress} İlerleme)`;
+            
+            const totalAnswered = correctCount + incorrectCount;
+            const successRate = totalAnswered > 0 ? ((correctCount / totalAnswered) * 100).toFixed(1) : "0.0";
+            document.getElementById('liveStatsTracker').innerText = `Doğru: ${correctCount} | Yanlış: ${incorrectCount} | Başarı: %${successRate}`;
+            document.getElementById('scoreTracker').innerText = `Puan: ${score}`;
+
+            document.getElementById('questionText').innerText = `${currentQuestionIdx + 1}. ${qData.q}`;
+            
+            const optionsContainer = document.getElementById('quizOptions');
+            optionsContainer.innerHTML = '';
+
+            const nextBtn = document.getElementById('nextQuestionBtn');
+            nextBtn.disabled = true;
+
+            qData.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'quiz-option-btn';
+                btn.innerHTML = `<span style="font-weight:700; color:#38bdf8;">${String.fromCharCode(65 + idx)})</span> ${opt}`;
+                btn.onclick = () => handleAnswer(idx, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function handleAnswer(selectedIdx, btnElem) {
+            if (selectedOption !== null) return;
+            selectedOption = selectedIdx;
+
+            const qData = quizQuestions[currentQuestionIdx];
+            const options = document.querySelectorAll('.quiz-option-btn');
+
+            if (selectedIdx === qData.correct) {
+                btnElem.classList.add('correct');
+                score += 25;
+                correctCount++;
+            } else {
+                btnElem.classList.add('incorrect');
+                options[qData.correct].classList.add('correct');
+                incorrectCount++;
+            }
+
+            options.forEach(btn => btn.disabled = true);
+            document.getElementById('nextQuestionBtn').disabled = false;
+        }
+
+        function nextQuestion() {
+            currentQuestionIdx++;
+            if (currentQuestionIdx < quizQuestions.length) {
+                loadQuestion();
+            } else {
+                showQuizResults();
+            }
+        }
+
+        function showQuizResults() {
+            document.getElementById('quizBody').style.display = 'none';
+            document.getElementById('quizResult').style.display = 'block';
+
+            const total = quizQuestions.length;
+            const successRate = ((correctCount / total) * 100).toFixed(1);
+
+            document.getElementById('resultSummary').innerHTML = `
+                Toplanan Toplam Puan: <strong style="color:#10b981;">${score}</strong><br>
+                Doğru Cevap Sayısı: <strong style="color:#10b981;">${correctCount}</strong><br>
+                Yanlış Cevap Sayısı: <strong style="color:#ef4444;">${incorrectCount}</strong><br>
+                Tamamlanma Oranı: <strong style="color:#38bdf8;">%100</strong><br>
+                Başarı Yüzdesi: <strong style="color:#facc15;">%${successRate}</strong>
+            `;
+        }
+
+        window.onload = () => {
+            selectTopCategory('all', document.querySelector('.top-controls .mode-btn.active'));
+        };
+
+        function animate() {
+            requestAnimationFrame(animate);
+            TWEEN.update();
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
